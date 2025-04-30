@@ -17,14 +17,38 @@ export default function App() {
     reader.onload = (e) => {
       const text = e.target?.result as string;
       const lines = text.split('\n').filter((line) => line.trim() !== '');
-      const data = lines.slice(1).map((line) => {
-        const [date, libelle, montant] = line.split(';');
-        return {
-          date: date.trim(),
-          libelle: libelle.trim(),
-          montant: parseFloat(montant.replace(',', '.')),
-        };
-      });
+      const data: Virement[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const cells = line.split(';');
+
+        // Format standard : date;libelle;montant
+        if (cells.length >= 3) {
+          const [date, libelle, montant] = cells;
+          const amount = parseFloat(montant.replace(',', '.').replace(/[^0-9.-]+/g, ''));
+          if (!isNaN(amount)) {
+            data.push({ date: date.trim(), libelle: libelle.trim(), montant: amount });
+            continue;
+          }
+        }
+
+        // Format Stripe/Sunday : payout_xxxx;Blé Noir;montant en dernière colonne ?
+        const alt = line.split(',');
+        if (alt.length >= 3) {
+          const id = alt[0].replaceAll('"', '').trim();
+          const nom = alt[1].replaceAll('"', '').trim();
+          const m = alt.at(-1)?.replace(',', '.').replace(/[^0-9.-]+/g, '');
+          const montant = parseFloat(m ?? '');
+
+          if (!isNaN(montant)) {
+            data.push({ date: id, libelle: nom, montant });
+          }
+        }
+      }
+
       setCsvData(data);
     };
     reader.readAsText(file);
@@ -46,7 +70,7 @@ export default function App() {
         <table style={{ width: '100%', marginTop: '1rem', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Date</th>
+              <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Date / ID</th>
               <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Libellé</th>
               <th style={{ borderBottom: '1px solid #ccc', textAlign: 'right' }}>Montant (€)</th>
             </tr>
