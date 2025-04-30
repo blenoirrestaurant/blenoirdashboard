@@ -74,7 +74,7 @@ export default function App() {
 
   function analyserTextePDF(contenu: string) {
     const lignes = contenu.split('\n');
-    const sources = ['SUNDAY', 'MARKET PAY', 'DELIVEROO', 'UBER', 'EDENRED', 'PLUXEE', 'UP COOP', 'REGLEMENT AFFILIES BI'];
+   const sources = ['SUNDAY', 'MARKET PAY', 'DELIVEROO', 'UBER', 'EDENRED', 'PLUXEE', 'UP COOP', 'REGLEMENT AFFILIES BI'];
     const resultats: Record<string, { total: number; count: number }> = {};
 
     lignes.forEach((ligne) => {
