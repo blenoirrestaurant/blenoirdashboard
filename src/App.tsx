@@ -1,74 +1,122 @@
-import { useState } from 'react';
-import { Card, CardContent } from './components/ui/card';
-import { Button } from './components/ui/button';
-import { Upload } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from './components/ui/table';
+import { useEffect, useState } from 'react'
+
+type Transaction = {
+  date: string
+  libelle: string
+  montant: number
+  source?: string
+}
 
 export default function App() {
-  const [csvData, setCsvData] = useState<
-    { date: string; libelle: string; montant: number }[]
-  >([]);
+  const [csvData, setCsvData] = useState<Transaction[]>([])
+  const [total, setTotal] = useState(0)
+  const [pdfFiles, setPdfFiles] = useState<string[]>([])
 
   function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const file = event.target.files?.[0]
+    if (!file) return
 
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n').filter((line) => line.trim() !== '');
+      const text = e.target?.result as string
+      const lines = text.split('\n').filter((line) => line.trim() !== '')
       const data = lines.slice(1).map((line) => {
-        const [date, libelle, montant] = line.split(',');
+        const [date, libelle, montant] = line.split(',')
         return {
           date,
           libelle,
-          montant: parseFloat(montant.replace(',', '.'))
-        };
-      });
-      setCsvData(data);
-    };
-    reader.readAsText(file);
+          montant: parseFloat(montant),
+        }
+      })
+      setCsvData(data)
+      setTotal(data.reduce((sum, row) => sum + row.montant, 0))
+    }
+    reader.readAsText(file)
   }
 
-  const total = csvData.reduce((sum, row) => sum + row.montant, 0);
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY
+    const folderId = '1TLCbDHSLcpj38OM3FbYFF1heJF9t9maW'
+    if (!apiKey) return
+
+    fetch(
+      `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType='application/pdf'&key=${apiKey}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.files) {
+          setPdfFiles(data.files.map((file: any) => file.name))
+        }
+      })
+      .catch((err) => {
+        console.error('Erreur de récupération Drive :', err)
+      })
+  }, [])
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Import virements (CSV)</h1>
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+      <h1>Import virements (CSV)</h1>
+
       <input type="file" accept=".csv" onChange={handleFileUpload} />
+      <p style={{ marginTop: '1rem' }}>
+        <strong>Total importé :</strong>{' '}
+        {total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+      </p>
 
-      <p className="mt-4 font-semibold">Total importé : {total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</p>
-
-      <Table className="mt-6 w-full">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Libellé</TableHead>
-            <TableHead className="text-right">Montant (€)</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          marginTop: '1rem',
+        }}
+      >
+        <thead>
+          <tr>
+            <th
+              style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}
+            >
+              Date
+            </th>
+            <th
+              style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}
+            >
+              Libellé
+            </th>
+            <th
+              style={{ borderBottom: '1px solid #ccc', textAlign: 'right' }}
+            >
+              Montant (€)
+            </th>
+          </tr>
+        </thead>
+        <tbody>
           {csvData.map((row, index) => (
-            <TableRow key={index}>
-              <TableCell>{row.date}</TableCell>
-              <TableCell>{row.libelle}</TableCell>
-              <TableCell className="text-right">
+            <tr key={index}>
+              <td>{row.date}</td>
+              <td>{row.libelle}</td>
+              <td style={{ textAlign: 'right' }}>
                 {row.montant.toLocaleString('fr-FR', {
                   style: 'currency',
-                  currency: 'EUR'
+                  currency: 'EUR',
                 })}
-              </TableCell>
-            </TableRow>
+              </td>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
+
+      <div style={{ marginTop: '3rem' }}>
+        <h2>📄 Relevés bancaires disponibles (Google Drive)</h2>
+        {pdfFiles.length === 0 ? (
+          <p>Aucun fichier PDF trouvé ou clé API manquante.</p>
+        ) : (
+          <ul>
+            {pdfFiles.map((file, idx) => (
+              <li key={idx}>{file}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
-  );
+  )
 }
