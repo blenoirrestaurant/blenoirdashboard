@@ -17,35 +17,21 @@ export default function App() {
     reader.onload = (e) => {
       const text = e.target?.result as string;
       const lines = text.split('\n').filter((line) => line.trim() !== '');
+
+      const headers = lines[0].split(';').map(h => h.replaceAll('"', '').trim().toLowerCase());
+      const idxId = headers.indexOf('id');
+      const idxNom = headers.indexOf('nom');
+      const idxMontant = headers.indexOf('montant');
+
       const data: Virement[] = [];
-
       for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        const cells = line.split(';');
-
-        // Format standard : date;libelle;montant
-        if (cells.length >= 3) {
-          const [date, libelle, montant] = cells;
-          const amount = parseFloat(montant.replace(',', '.').replace(/[^0-9.-]+/g, ''));
-          if (!isNaN(amount)) {
-            data.push({ date: date.trim(), libelle: libelle.trim(), montant: amount });
-            continue;
-          }
-        }
-
-        // Format Stripe/Sunday : payout_xxxx;Blé Noir;montant en dernière colonne ?
-        const alt = line.split(',');
-        if (alt.length >= 3) {
-          const id = alt[0].replaceAll('"', '').trim();
-          const nom = alt[1].replaceAll('"', '').trim();
-          const m = alt.at(-1)?.replace(',', '.').replace(/[^0-9.-]+/g, '');
-          const montant = parseFloat(m ?? '');
-
-          if (!isNaN(montant)) {
-            data.push({ date: id, libelle: nom, montant });
-          }
+        const parts = lines[i].split(';').map(p => p.replaceAll('"', '').trim());
+        const id = parts[idxId] || `Ligne ${i + 1}`;
+        const nom = parts[idxNom] || '';
+        const montantStr = parts[idxMontant]?.replace(',', '.').replace(/[^0-9.-]+/g, '') || '0';
+        const montant = parseFloat(montantStr);
+        if (!isNaN(montant)) {
+          data.push({ date: id, libelle: nom, montant });
         }
       }
 
