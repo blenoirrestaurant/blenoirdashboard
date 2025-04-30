@@ -19,13 +19,15 @@ export default function App() {
       const lines = text.split('\n').filter((line) => line.trim() !== '');
 
       const headers = lines[0].split(';').map(h => h.replaceAll('"', '').trim().toLowerCase());
-      const idxId = headers.indexOf('id');
-      const idxNom = headers.indexOf('nom');
-      const idxMontant = headers.indexOf('montant');
+      const idxId = headers.findIndex(h => h.includes('id') || h.includes('date'));
+      const idxNom = headers.findIndex(h => h.includes('nom') || h.includes('libell'));
+      const idxMontant = headers.findIndex(h => h.includes('montant') || h.includes('amount'));
 
       const data: Virement[] = [];
       for (let i = 1; i < lines.length; i++) {
         const parts = lines[i].split(';').map(p => p.replaceAll('"', '').trim());
+        if (!parts[idxMontant]) continue;
+
         const id = parts[idxId] || `Ligne ${i + 1}`;
         const nom = parts[idxNom] || '';
         const montantStr = parts[idxMontant]?.replace(',', '.').replace(/[^0-9.-]+/g, '') || '0';
