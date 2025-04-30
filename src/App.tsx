@@ -78,20 +78,21 @@ export default function App() {
     const resultats: Record<string, { total: number; count: number }> = {};
 
     lignes.forEach((ligne) => {
-      for (const source of sources) {
-        if (ligne.toUpperCase().includes(source)) {
-          const montantMatch = ligne.match(/([0-9]+,[0-9]{2})\s*$/);
-          if (montantMatch) {
-            const montant = parseFloat(montantMatch[1].replace(',', '.'));
-            if (!resultats[source]) {
-              resultats[source] = { total: 0, count: 0 };
-            }
-            resultats[source].total += montant;
-            resultats[source].count += 1;
-          }
+  const ligneUpper = ligne.toUpperCase();
+  for (const source of sources) {
+    if (ligneUpper.includes(source)) {
+      const montantMatch = ligne.match(/([0-9]+,[0-9]{2})(?!.*[0-9]+,[0-9]{2})/);
+      if (montantMatch) {
+        const montant = parseFloat(montantMatch[1].replace(',', '.'));
+        if (!resultats[source]) {
+          resultats[source] = { total: 0, count: 0 };
         }
+        resultats[source].total += montant;
+        resultats[source].count += 1;
       }
-    });
+    }
+  }
+});
 
     const resume: VirementResume[] = Object.entries(resultats).map(([source, { total, count }]) => ({
       source,
