@@ -81,7 +81,28 @@ export default function App() {
       })
       .catch(() => setPdfFiles([]));
   }, []);
+  
+useEffect(() => {
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+  const folderId = '1TLCbDHSLcpj38OM3FbYFF1heJF9t9maW';
 
+  console.log('✅ API Key utilisée :', apiKey);
+
+  if (!apiKey) {
+    console.error('❌ Clé API absente ! Vérifie que tu as bien VITE_GOOGLE_API_KEY dans Vercel.');
+    return;
+  }
+
+  fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType='application/pdf'&fields=files(id,name)&key=${apiKey}`)
+    .then((res) => res.json())
+    .then((data) => {
+      console.log('📄 Fichiers récupérés depuis Google Drive :', data.files);
+    })
+    .catch((err) => {
+      console.error('❌ Erreur lors du fetch Google Drive', err);
+    });
+}, []);
+  
   return (
     <div style={{ padding: '2rem' }}>
       <h1>📥 Import virements (CSV)</h1>
