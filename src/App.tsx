@@ -7,9 +7,14 @@ type CsvRow = {
   montant: number;
 };
 
+type PdfFile = {
+  name: string;
+  url: string;
+};
+
 export default function App() {
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
-  const [pdfFiles, setPdfFiles] = useState<string[]>([]);
+  const [pdfFiles, setPdfFiles] = useState<PdfFile[]>([]);
   const [total, setTotal] = useState(0);
   const [sources, setSources] = useState<Record<string, number>>({});
 
@@ -66,7 +71,12 @@ export default function App() {
       .then((res) => res.json())
       .then((data) => {
         if (data.files) {
-          setPdfFiles(data.files.map((file: any) => file.name));
+          setPdfFiles(
+            data.files.map((file: any) => ({
+              name: file.name,
+              url: `https://drive.google.com/file/d/${file.id}/view`,
+            }))
+          );
         }
       })
       .catch(() => setPdfFiles([]));
@@ -117,7 +127,11 @@ export default function App() {
         ) : (
           <ul>
             {pdfFiles.map((file, index) => (
-              <li key={index}>{file}</li>
+              <li key={index}>
+                <a href={file.url} target="_blank" rel="noopener noreferrer">
+                  {file.name}
+                </a>
+              </li>
             ))}
           </ul>
         )}
