@@ -7,14 +7,9 @@ type CsvRow = {
   montant: number;
 };
 
-type PdfFile = {
-  name: string;
-  url: string;
-};
-
 export default function App() {
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
-  const [pdfFiles, setPdfFiles] = useState<PdfFile[]>([]);
+  const [pdfFiles, setPdfFiles] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
   const [sources, setSources] = useState<Record<string, number>>({});
 
@@ -65,49 +60,39 @@ export default function App() {
     const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
     const folderId = '1TLCbDHSLcpj38OM3FbYFF1heJF9t9maW';
 
-    if (!apiKey) return;
+    if (!apiKey) {
+      console.error('❌ Clé API absente ! Vérifie VITE_GOOGLE_API_KEY');
+      return;
+    }
 
-    fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType='application/pdf'&key=${apiKey}`)
+    console.log('✅ API Key utilisée :', apiKey);
+
+    fetch(
+      `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType='application/pdf'&fields=files(id,name)&key=${apiKey}`
+    )
       .then((res) => res.json())
       .then((data) => {
+        console.log('📄 Fichiers récupérés :', data);
         if (data.files) {
-          setPdfFiles(
-            data.files.map((file: any) => ({
-              name: file.name,
-              url: `https://drive.google.com/file/d/${file.id}/view`,
-            }))
-          );
+          setPdfFiles(data.files.map((file: any) => file.name));
+        } else {
+          setPdfFiles([]);
         }
       })
-      .catch(() => setPdfFiles([]));
+      .catch((err) => {
+        console.error('Erreur fetch Google Drive :', err);
+        setPdfFiles([]);
+      });
   }, []);
-  
-useEffect(() => {
-  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-  const folderId = '1TLCbDHSLcpj38OM3FbYFF1heJF9t9maW';
 
-  console.log('✅ API Key utilisée :', apiKey);
-
-  if (!apiKey) {
-    console.error('❌ Clé API absente ! Vérifie que tu as bien VITE_GOOGLE_API_KEY dans Vercel.');
-    return;
-  }
-
-  fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType='application/pdf'&fields=files(id,name)&key=${apiKey}`)
-    .then((res) => res.json())
-    .then((data) => {
-      console.log('📄 Fichiers récupérés depuis Google Drive :', data.files);
-    })
-    .catch((err) => {
-      console.error('❌ Erreur lors du fetch Google Drive', err);
-    });
-}, []);
-  
   return (
     <div style={{ padding: '2rem' }}>
       <h1>📥 Import virements (CSV)</h1>
       <input type="file" accept=".csv" onChange={handleFileUpload} />
-      <p><strong>Total importé</strong> : {total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</p>
+      <p>
+        <strong>Total importé</strong> :{' '}
+        {total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+      </p>
 
       <table style={{ width: '100%', marginTop: '2rem' }}>
         <thead>
@@ -123,7 +108,10 @@ useEffect(() => {
               <td>{row.date}</td>
               <td>{row.libelle}</td>
               <td style={{ textAlign: 'right' }}>
-                {row.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                {row.montant.toLocaleString('fr-FR', {
+                  style: 'currency',
+                  currency: 'EUR',
+                })}
               </td>
             </tr>
           ))}
@@ -135,7 +123,8 @@ useEffect(() => {
         <ul>
           {Object.entries(sources).map(([label, amount]) => (
             <li key={label}>
-              <strong>{label}</strong> : {amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+              <strong>{label}</strong> :{' '}
+              {amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
             </li>
           ))}
         </ul>
@@ -148,11 +137,7 @@ useEffect(() => {
         ) : (
           <ul>
             {pdfFiles.map((file, index) => (
-              <li key={index}>
-                <a href={file.url} target="_blank" rel="noopener noreferrer">
-                  {file.name}
-                </a>
-              </li>
+              <li key={index}>{file}</li>
             ))}
           </ul>
         )}
